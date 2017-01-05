@@ -1,1 +1,4 @@
 *.pyc
+output/checkpoint
+output/checkpoint.ckpt
+output/checkpoint.ckpt.meta
