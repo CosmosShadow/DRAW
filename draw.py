@@ -1,6 +1,7 @@
 # coding: utf-8
 import tensorflow as tf
 from cmtf.func import lib as tflib
+from cmtf.model.tf_object import TFObject
 
 # 超参
 def default_hp():
@@ -18,18 +19,20 @@ def default_hp():
 	                   T = 10,			#步长
 	                   # 训练参数
 	                   batch_size = 128,
-	                   train_iters = 10000,
+	                   epochs = 10000,
 	                   learning_rate = 1e-3,
-	                   save_path = 'output/checkpoint.ckpt'
 	                   )
 
 # 模型
-class DRAW(object):
+class DRAW(TFObject):
 	def __init__(self, graph, hp, scope='draw'):
 		self.graph = graph
 		self.hp = hp
 		self.scope = scope
 		self.build_graph()
+
+	def restore(self, session, checkpoint_file, checkpoint_scope='draw'):
+		super(TFObject, self).restore(session, checkpoint_file, checkpoint_scope)
 
 	def build_graph(self):
 		with self.graph.as_default():
@@ -88,8 +91,7 @@ class DRAW(object):
 					KL = tf.add_n(kl_terms)
 					self.Lz = tf.reduce_mean(KL)
 					# L = Lx + Lz
-					self.cost = self.Lx + self.Lz
-
+					self.loss = self.Lx + self.Lz
 
 def linear(x, output_dim):
 	w = tf.get_variable("w", [x.get_shape()[1], output_dim]) 
