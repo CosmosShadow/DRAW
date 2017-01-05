@@ -1,35 +1,14 @@
 # coding: utf-8
-
 import tensorflow as tf
 import numpy as np
 import os
-from cmtf.func import lib as tflib
-from model import DRAW
+import draw
 
-# 超参
-def default_draw_hp():
-	return tflib.HParams(
-	                   # 结构参数
-	                   ReadAtten = True,	#读是否采用Attention机制
-	                   WriteAtten = True,
-	                   A = 28,	#图片大小 A * B
-	                   B = 28,
-	                   enc_size = 256,	#LSTM encode大小
-	                   dec_size = 256,	#LSTM decode大小
-	                   read_n = 5,		#读格子大小
-	                   write_n = 5,		#写格子大小
-	                   z_size = 10,		#采样大小
-	                   T = 10,			#步长
-	                   # 训练参数
-	                   batch_size = 128,
-	                   train_iters = 10000,
-	                   learning_rate = 1e-3,
-	                   save_path = 'output/checkpoint.ckpt'
-	                   )
 
-hp = default_draw_hp()
+hp = draw.default_hp()
 graph = tf.Graph()
-model = DRAW(graph, hp)
+model = draw.DRAW(graph, hp)
+
 
 # optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5)
 # grads = optimizer.compute_gradients(cost)

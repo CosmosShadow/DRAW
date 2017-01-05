@@ -1,7 +1,29 @@
 # coding: utf-8
 import tensorflow as tf
+from cmtf.func import lib as tflib
 
+# 超参
+def default_hp():
+	return tflib.HParams(
+	                   # 结构参数
+	                   ReadAtten = True,	#读是否采用Attention机制
+	                   WriteAtten = True,
+	                   A = 28,	#图片大小 A * B
+	                   B = 28,
+	                   enc_size = 256,	#LSTM encode大小
+	                   dec_size = 256,	#LSTM decode大小
+	                   read_n = 5,		#读格子大小
+	                   write_n = 5,		#写格子大小
+	                   z_size = 10,		#采样大小
+	                   T = 10,			#步长
+	                   # 训练参数
+	                   batch_size = 128,
+	                   train_iters = 10000,
+	                   learning_rate = 1e-3,
+	                   save_path = 'output/checkpoint.ckpt'
+	                   )
 
+# 模型
 class DRAW(object):
 	def __init__(self, graph, hp, scope='draw'):
 		self.graph = graph
