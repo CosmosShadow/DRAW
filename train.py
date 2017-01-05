@@ -54,7 +54,7 @@ with graph.as_default():
 		Lx_, Lz_, _ = sess.run([model.Lx, model.Lz, train_op], {model.x: x_})
 		Lx_arr.append(Lx_)
 		Lz_arr.append(Lz_)
-		if i%100==0:
+		if i > 0 and i%10==0:
 			print "iter=%d : Lx: %f Lz: %f" % (i, np.mean(np.array(Lx_arr)), np.mean(np.array(Lz_arr)))
 			saver.save(sess, save_path)
 

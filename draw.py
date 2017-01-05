@@ -32,7 +32,7 @@ class DRAW(TFObject):
 		self.build_graph()
 
 	def restore(self, session, checkpoint_file, checkpoint_scope='draw'):
-		super(TFObject, self).restore(session, checkpoint_file, checkpoint_scope)
+		super(DRAW, self).restore(session, checkpoint_file, checkpoint_scope)
 
 	def build_graph(self):
 		with self.graph.as_default():
@@ -92,6 +92,22 @@ class DRAW(TFObject):
 					self.Lz = tf.reduce_mean(KL)
 					# L = Lx + Lz
 					self.loss = self.Lx + self.Lz
+
+					# 生成过程
+					DO_SHARE = True
+					gen_cs = [0] * T #生成序列
+					gen_z = tf.random_normal((self.hp.batch_size, self.hp.z_size), mean=0, stddev=1) # Qsampler noise
+					gen_dec_state = lstm_dec.zero_state(self.hp.batch_size, tf.float32)
+					gen_h_dec_prev = tf.zeros((self.hp.batch_size, self.hp.dec_size))
+					for t in range(T):
+						gen_c_prev = tf.zeros((self.hp.batch_size, A * B)) if t==0 else gen_cs[t-1]
+						# decode
+						gen_h_dec, gen_dec_state = decode(lstm_dec, gen_dec_state, gen_z, DO_SHARE)
+						# write
+						gen_cs[t] = gen_c_prev + write(gen_h_dec, self.hp.write_n, A, B, DO_SHARE)
+						gen_h_dec_prev = gen_h_dec
+					self.generated_images_sequences = [tf.nn.sigmoid(item) for item in gen_cs]
+
 
 def linear(x, output_dim):
 	w = tf.get_variable("w", [x.get_shape()[1], output_dim]) 
