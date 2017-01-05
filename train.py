@@ -1,7 +1,6 @@
 # coding: utf-8
 
 import tensorflow as tf
-from tensorflow.examples.tutorials import mnist
 import numpy as np
 import os
 from cmtf.func import lib as tflib
