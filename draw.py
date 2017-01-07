@@ -50,7 +50,7 @@ class DRAW(TFObject):
 					write = write_atten if self.hp.WriteAtten else write_no_attn
 
 					cs = [0] * T #生成序列
-					mus, logsigmas, sigmas=[0]* T, [0]*T, [0]*T #Q采样
+					mus, logsigma2s, sigmas=[0]* T, [0]*T, [0]*T #Q采样
 					# LSTM状态
 					h_dec_prev = tf.zeros((self.hp.batch_size, self.hp.dec_size))
 					enc_state = lstm_enc.zero_state(self.hp.batch_size, tf.float32)
@@ -66,7 +66,7 @@ class DRAW(TFObject):
 						# encode
 						h_enc, enc_state = encode(lstm_enc, enc_state, tf.concat(1, [r, h_dec_prev]), DO_SHARE)
 						# Q
-						z, mus[t], logsigmas[t], sigmas[t] = sampleQ(h_enc, self.hp.z_size, epsilon, DO_SHARE)
+						z, mus[t], logsigma2s[t], sigmas[t] = sampleQ(h_enc, self.hp.z_size, epsilon, DO_SHARE)
 						# decode
 						h_dec, dec_state = decode(lstm_dec, dec_state, z, DO_SHARE)
 						# write
@@ -86,8 +86,8 @@ class DRAW(TFObject):
 					for t in range(T):
 						mu2 = tf.square(mus[t])
 						sigma2 = tf.square(sigmas[t])
-						logsigma = logsigmas[t]
-						kl_terms[t] = 0.5 * tf.reduce_sum(mu2+sigma2-2*logsigma, 1) - T*.5 # each kl term is (1xminibatch)
+						logsigma2 = logsigma2s[t]
+						kl_terms[t] = 0.5 * tf.reduce_sum(mu2 + sigma2 - logsigma2 - 1)
 					KL = tf.add_n(kl_terms)
 					self.Lz = tf.reduce_mean(KL)
 					# L = Lx + Lz
@@ -165,12 +165,15 @@ def encode(lstm_enc, state, input, DO_SHARE):
 
 
 def sampleQ(h_enc, z_size, epsilon, DO_SHARE):
+	eps = 1e-8
 	with tf.variable_scope("mu", reuse=DO_SHARE):
 		mu = linear(h_enc, z_size)
 	with tf.variable_scope("sigma", reuse=DO_SHARE):
-		logsigma = linear(h_enc, z_size)
-		sigma = tf.exp(logsigma)
-	return (mu + sigma*epsilon, mu, logsigma, sigma)
+		# stddev = tf.exp(linear(h_enc, z_size))
+		# logsigma2 = tf.log(tf.square(stddev) + eps)
+		stddev = tf.sqrt(tf.exp(linear(h_enc, z_size)))
+		logsigma2 = tf.log(tf.square(stddev) + eps)
+	return (mu + sigma*epsilon, mu, logsigma2, sigma)
 
 
 def decode(lstm_dec, state, input, DO_SHARE):

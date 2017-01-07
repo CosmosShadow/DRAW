@@ -1,9 +1,14 @@
 # coding: utf-8
-import tensorflow as tf
-import numpy as np
 import os
-import draw
+import imageio
+import numpy as np
+import tensorflow as tf
+
 import cmtf.data.data_mnist as mnist
+from ImageOperation.images2one import *
+from scipy import misc
+
+import draw
 
 
 save_path = 'output/checkpoint.ckpt'
@@ -28,7 +33,16 @@ with graph.as_default():
 	# restore
 	model.restore(sess, save_path)
 
+	unit_images = []
 	images = sess.run(model.generated_images_sequences)
-	print images
+	for T, image in enumerate(images):
+		imgs = images[T].reshape(-1, hp.A, hp.B)[:100]
+		img = images2one(imgs)
+		img = np.clip(img, 0.0, 1.0)
+		img = (img * 255).astype(np.uint8)
+		unit_images.append(img)
+		imageio.imwrite('images/' +str(T) + '.png', img)
+
+	imageio.mimsave('images/gen.gif', unit_images, duration=1.0)
 
 	sess.close()
