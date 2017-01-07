@@ -8,7 +8,6 @@ import cmtf.data.data_mnist as mnist
 
 save_path = 'output/checkpoint.ckpt'
 
-
 # 检测目录是否存在
 save_dir = os.path.dirname(save_path)
 if not os.path.exists(save_dir):
@@ -25,7 +24,11 @@ model = draw.DRAW(graph, hp)
 with graph.as_default():
 	# 优化方法
 	optimizer = tf.train.AdamOptimizer(hp.learning_rate, beta1=0.5)
-	grads = optimizer.compute_gradients(model.loss)
+
+	l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables() ]) * 0.1
+	loss = model.loss + l2_loss
+
+	grads = optimizer.compute_gradients(loss)
 	for i,(g,v) in enumerate(grads):
 		if g is not None:
 			grads[i]=(tf.clip_by_norm(g,5),v) # clip gradients
@@ -41,15 +44,17 @@ with graph.as_default():
 	saver = tf.train.Saver()
 	tf.initialize_all_variables().run()
 
-	# restore
-	if os.path.exists(save_path):
-	 	saver.restore(sess, save_path)
+	# # restore
+	# if os.path.exists(save_path):
+	#  	saver.restore(sess, save_path)
 
 	data = mnist.read_data_sets()
 
 	# train
 	for i in range(hp.epochs):
 		x_, _ = data.train.next_batch(hp.batch_size)
+		x_ = (x_ > 0.5).astype(np.float32)		#二值化
+
 		Lx_, Lz_, _ = sess.run([model.Lx, model.Lz, train_op], {model.x: x_})
 		if (i+1)%10==0:
 			str_output = "epoch: %d   Lx: %.2f   Lz: %.2f" % (i, Lx_, Lz_)

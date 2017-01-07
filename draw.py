@@ -61,6 +61,7 @@ class DRAW(TFObject):
 					# 构建模型
 					DO_SHARE = None
 					output_tensor = tf.zeros((self.hp.batch_size, A * B))
+					self.output_tensors = [output_tensor]
 					for t in range(self.hp.T):
 						# read
 						x_hat = self.x - tf.sigmoid(output_tensor) # error image
@@ -76,6 +77,7 @@ class DRAW(TFObject):
 						h_dec, dec_state = decode(lstm_dec, dec_state, z, DO_SHARE)
 						# write
 						output_tensor = output_tensor + write(h_dec, self.hp.write_n, A, B, DO_SHARE)
+						self.output_tensors.append(output_tensor)
 						h_dec_prev = h_dec
 
 						# LSTM参数重用
