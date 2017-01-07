@@ -44,9 +44,9 @@ with graph.as_default():
 	saver = tf.train.Saver()
 	tf.initialize_all_variables().run()
 
-	# # restore
-	# if os.path.exists(save_path):
-	#  	saver.restore(sess, save_path)
+	# restore
+	if os.path.exists(save_path):
+	 	saver.restore(sess, save_path)
 
 	data = mnist.read_data_sets()
 

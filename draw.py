@@ -19,7 +19,7 @@ def default_hp():
 	                   T = 10,			#步长
 	                   # 训练参数
 	                   batch_size = 128,
-	                   epochs = 10000,
+	                   epochs = 50000,
 	                   learning_rate = 1e-2,
 	                   # 生成参数
 	                   gen_batch_size_sqrt = 11,
