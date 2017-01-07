@@ -95,18 +95,18 @@ class DRAW(TFObject):
 
 					# 生成过程
 					DO_SHARE = True
-					gen_cs = [0] * T #生成序列
 					gen_z = tf.random_normal((self.hp.batch_size, self.hp.z_size), mean=0, stddev=1) # Qsampler noise
+					# gen_z = tf.placeholder(tf.float32, shape=(self.hp.batch_size, self.hp.z_size))
 					gen_dec_state = lstm_dec.zero_state(self.hp.batch_size, tf.float32)
-					gen_h_dec_prev = tf.zeros((self.hp.batch_size, self.hp.dec_size))
+					sampled_tensor = tf.zeros((self.hp.batch_size, A * B))
+					self.sampled_tensors = []
 					for t in range(T):
-						gen_c_prev = tf.zeros((self.hp.batch_size, A * B)) if t==0 else gen_cs[t-1]
 						# decode
 						gen_h_dec, gen_dec_state = decode(lstm_dec, gen_dec_state, gen_z, DO_SHARE)
 						# write
-						gen_cs[t] = gen_c_prev + write(gen_h_dec, self.hp.write_n, A, B, DO_SHARE)
-						gen_h_dec_prev = gen_h_dec
-					self.generated_images_sequences = [tf.nn.sigmoid(item) for item in gen_cs]
+						sampled_tensor = sampled_tensor + write(gen_h_dec, self.hp.write_n, A, B, DO_SHARE)
+						# store to sequences
+						self.sampled_tensors.append(tf.nn.sigmoid(sampled_tensor))
 
 
 def linear(x, output_dim):
@@ -173,7 +173,7 @@ def sampleQ(h_enc, z_size, epsilon, DO_SHARE):
 		# logsigma2 = tf.log(tf.square(stddev) + eps)
 		stddev = tf.sqrt(tf.exp(linear(h_enc, z_size)))
 		logsigma2 = tf.log(tf.square(stddev) + eps)
-	return (mu + sigma*epsilon, mu, logsigma2, sigma)
+	return (mu + stddev*epsilon, mu, logsigma2, stddev)
 
 
 def decode(lstm_dec, state, input, DO_SHARE):

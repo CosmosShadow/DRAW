@@ -34,12 +34,11 @@ with graph.as_default():
 	model.restore(sess, save_path)
 
 	unit_images = []
-	images = sess.run(model.generated_images_sequences)
+	images = sess.run(model.sampled_tensors)
 	for T, image in enumerate(images):
-		imgs = images[T].reshape(-1, hp.A, hp.B)[:100]
+		imgs = image.reshape(-1, hp.A, hp.B)[:100]
 		img = images2one(imgs)
-		img = np.clip(img, 0.0, 1.0)
-		img = (img * 255).astype(np.uint8)
+		img = (np.clip(img, 0.0, 1.0) *  255).astype(np.uint8)
 		unit_images.append(img)
 		imageio.imwrite('images/' +str(T) + '.png', img)
 
