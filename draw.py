@@ -15,12 +15,14 @@ def default_hp():
 	                   dec_size = 256,	#LSTM decode大小
 	                   read_n = 5,		#读格子大小
 	                   write_n = 5,		#写格子大小
-	                   z_size = 10,		#采样大小
+	                   z_size = 2,		#采样大小
 	                   T = 10,			#步长
 	                   # 训练参数
 	                   batch_size = 128,
 	                   epochs = 10000,
-	                   learning_rate = 1e-3,
+	                   learning_rate = 1e-4,
+	                   # 生成参数
+	                   gen_batch_size_sqrt = 11,
 	                   )
 
 # 模型
@@ -95,14 +97,15 @@ class DRAW(TFObject):
 
 					# 生成过程
 					DO_SHARE = True
-					gen_z = tf.random_normal((self.hp.batch_size, self.hp.z_size), mean=0, stddev=1) # Qsampler noise
-					# gen_z = tf.placeholder(tf.float32, shape=(self.hp.batch_size, self.hp.z_size))
-					gen_dec_state = lstm_dec.zero_state(self.hp.batch_size, tf.float32)
-					sampled_tensor = tf.zeros((self.hp.batch_size, A * B))
+					# gen_z = tf.random_normal((self.hp.batch_size, self.hp.z_size), mean=0, stddev=1) # Qsampler noise
+					gen_batch_size = self.hp.gen_batch_size_sqrt * self.hp.gen_batch_size_sqrt
+					self.gen_z = tf.placeholder(tf.float32, shape=(gen_batch_size, self.hp.z_size))
+					gen_dec_state = lstm_dec.zero_state(gen_batch_size, tf.float32)
+					sampled_tensor = tf.zeros((gen_batch_size, A * B))
 					self.sampled_tensors = []
 					for t in range(T):
 						# decode
-						gen_h_dec, gen_dec_state = decode(lstm_dec, gen_dec_state, gen_z, DO_SHARE)
+						gen_h_dec, gen_dec_state = decode(lstm_dec, gen_dec_state, self.gen_z, DO_SHARE)
 						# write
 						sampled_tensor = sampled_tensor + write(gen_h_dec, self.hp.write_n, A, B, DO_SHARE)
 						# store to sequences
@@ -171,7 +174,7 @@ def sampleQ(h_enc, z_size, epsilon, DO_SHARE):
 	with tf.variable_scope("sigma", reuse=DO_SHARE):
 		# stddev = tf.exp(linear(h_enc, z_size))
 		# logsigma2 = tf.log(tf.square(stddev) + eps)
-		stddev = tf.sqrt(tf.exp(linear(h_enc, z_size)))
+		stddev = tf.exp(linear(h_enc, z_size))
 		logsigma2 = tf.log(tf.square(stddev) + eps)
 	return (mu + stddev*epsilon, mu, logsigma2, stddev)
 

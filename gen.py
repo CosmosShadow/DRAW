@@ -33,8 +33,18 @@ with graph.as_default():
 	# restore
 	model.restore(sess, save_path)
 
+	# 生成网格数据
+	grid_size = hp.gen_batch_size_sqrt
+	line = np.linspace(-1.0, 1.0, grid_size)
+	mat = np.array([line] * 11)
+	gen_z_ = np.zeros([grid_size, grid_size, hp.z_size])
+	gen_z_[:, :, 0] = mat
+	gen_z_[:, :, 1] = mat.T
+	gen_z_ = gen_z_.reshape(-1, hp.z_size)
+	
+	# 生成图片
 	unit_images = []
-	images = sess.run(model.sampled_tensors)
+	images = sess.run(model.sampled_tensors, feed_dict={model.gen_z: gen_z_})
 	for T, image in enumerate(images):
 		imgs = image.reshape(-1, hp.A, hp.B)[:100]
 		img = images2one(imgs)
