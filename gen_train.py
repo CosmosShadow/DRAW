@@ -3,8 +3,12 @@ import tensorflow as tf
 import numpy as np
 import os
 import draw
+import imageio
+from scipy import misc
 import cmtf.data.data_mnist as mnist
+from ImageOperation.images2one import *
 
+import draw
 
 save_path = 'output/checkpoint.ckpt'
 
@@ -39,7 +43,7 @@ with graph.as_default():
 	x_ = (x_ > 0.5).astype(np.float32)		#二值化
 
 	images = sess.run(model.output_tensors, {model.x: x_})
-	
+	unit_images = []
 	for T, image in enumerate(images):
 		imgs = image.reshape(-1, hp.A, hp.B)[:100]
 		img = images2one(imgs)
