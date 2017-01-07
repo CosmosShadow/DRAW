@@ -15,12 +15,12 @@ def default_hp():
 	                   dec_size = 256,	#LSTM decode大小
 	                   read_n = 5,		#读格子大小
 	                   write_n = 5,		#写格子大小
-	                   z_size = 2,		#采样大小
+	                   z_size = 10,		#采样大小
 	                   T = 10,			#步长
 	                   # 训练参数
 	                   batch_size = 128,
 	                   epochs = 10000,
-	                   learning_rate = 1e-4,
+	                   learning_rate = 1e-2,
 	                   # 生成参数
 	                   gen_batch_size_sqrt = 11,
 	                   )
@@ -52,54 +52,44 @@ class DRAW(TFObject):
 					write = write_atten if self.hp.WriteAtten else write_no_attn
 
 					cs = [0] * T #生成序列
-					mus, logsigma2s, sigmas=[0]* T, [0]*T, [0]*T #Q采样
 					# LSTM状态
 					h_dec_prev = tf.zeros((self.hp.batch_size, self.hp.dec_size))
 					enc_state = lstm_enc.zero_state(self.hp.batch_size, tf.float32)
 					dec_state = lstm_dec.zero_state(self.hp.batch_size, tf.float32)
 
+					self.Lz = 0.0
 					# 构建模型
 					DO_SHARE = None
+					output_tensor = tf.zeros((self.hp.batch_size, A * B))
 					for t in range(self.hp.T):
 						# read
-						c_prev = tf.zeros((self.hp.batch_size, A * B)) if t==0 else cs[t-1]
-						x_hat = self.x - tf.sigmoid(c_prev) # error image
+						x_hat = self.x - tf.sigmoid(output_tensor) # error image
 						r = read(self.x, x_hat, h_dec_prev, self.hp.read_n, A, B, DO_SHARE)
 						# encode
 						h_enc, enc_state = encode(lstm_enc, enc_state, tf.concat(1, [r, h_dec_prev]), DO_SHARE)
 						# Q
-						z, mus[t], logsigma2s[t], sigmas[t] = sampleQ(h_enc, self.hp.z_size, epsilon, DO_SHARE)
+						z, mean, stddev = sampleQ(h_enc, self.hp.z_size, epsilon, DO_SHARE)
+						# vae loss
+						vae_loss = get_vae_cost(mean, stddev)
+						self.Lz = self.Lz + vae_loss
 						# decode
 						h_dec, dec_state = decode(lstm_dec, dec_state, z, DO_SHARE)
 						# write
-						cs[t] = c_prev + write(h_dec, self.hp.write_n, A, B, DO_SHARE)
+						output_tensor = output_tensor + write(h_dec, self.hp.write_n, A, B, DO_SHARE)
 						h_dec_prev = h_dec
 
 						# LSTM参数重用
 						DO_SHARE = True
 
 					# 代价函数
-					# Lx
-					x_recons = tf.nn.sigmoid(cs[-1])
-					Lx = tf.reduce_sum(binary_crossentropy(self.x, x_recons), 1) # reconstruction term
-					self.Lx = tf.reduce_mean(Lx)
-					# Lz
-					kl_terms = [0] * T
-					for t in range(T):
-						mu2 = tf.square(mus[t])
-						sigma2 = tf.square(sigmas[t])
-						logsigma2 = logsigma2s[t]
-						kl_terms[t] = 0.5 * tf.reduce_sum(mu2 + sigma2 - logsigma2 - 1)
-					KL = tf.add_n(kl_terms)
-					self.Lz = tf.reduce_mean(KL)
-					# L = Lx + Lz
+					self.Lx = tf.reduce_sum(binary_crossentropy(self.x, tf.nn.sigmoid(output_tensor)))
 					self.loss = self.Lx + self.Lz
 
 					# 生成过程
 					DO_SHARE = True
-					# gen_z = tf.random_normal((self.hp.batch_size, self.hp.z_size), mean=0, stddev=1) # Qsampler noise
 					gen_batch_size = self.hp.gen_batch_size_sqrt * self.hp.gen_batch_size_sqrt
-					self.gen_z = tf.placeholder(tf.float32, shape=(gen_batch_size, self.hp.z_size))
+					self.gen_z = tf.random_normal((gen_batch_size, self.hp.z_size), mean=0, stddev=1) # Qsampler noise
+					# self.gen_z = tf.placeholder(tf.float32, shape=(gen_batch_size, self.hp.z_size))
 					gen_dec_state = lstm_dec.zero_state(gen_batch_size, tf.float32)
 					sampled_tensor = tf.zeros((gen_batch_size, A * B))
 					self.sampled_tensors = []
@@ -169,15 +159,14 @@ def encode(lstm_enc, state, input, DO_SHARE):
 
 def sampleQ(h_enc, z_size, epsilon, DO_SHARE):
 	eps = 1e-8
-	with tf.variable_scope("mu", reuse=DO_SHARE):
-		mu = linear(h_enc, z_size)
-	with tf.variable_scope("sigma", reuse=DO_SHARE):
-		# stddev = tf.exp(linear(h_enc, z_size))
-		# logsigma2 = tf.log(tf.square(stddev) + eps)
-		stddev = tf.exp(linear(h_enc, z_size))
-		logsigma2 = tf.log(tf.square(stddev) + eps)
-	return (mu + stddev*epsilon, mu, logsigma2, stddev)
+	with tf.variable_scope("mean", reuse=DO_SHARE):
+		mean = linear(h_enc, z_size)
+	with tf.variable_scope("stddev", reuse=DO_SHARE):
+		stddev = tf.sqrt(tf.exp(linear(h_enc, z_size)))
+	return (mean + stddev*epsilon, mean, stddev)
 
+def get_vae_cost(mean, stddev, epsilon=1e-8):
+    return tf.reduce_sum(0.5 * (tf.square(mean) + tf.square(stddev) - 2.0 * tf.log(stddev + epsilon) - 1.0))
 
 def decode(lstm_dec, state, input, DO_SHARE):
 	with tf.variable_scope("decoder",reuse=DO_SHARE):

@@ -41,9 +41,9 @@ with graph.as_default():
 	saver = tf.train.Saver()
 	tf.initialize_all_variables().run()
 
-	# # restore
-	# if os.path.exists(save_path):
-	# 	saver.restore(sess, save_path)
+	# restore
+	if os.path.exists(save_path):
+	 	saver.restore(sess, save_path)
 
 	data = mnist.read_data_sets()
 
@@ -53,7 +53,7 @@ with graph.as_default():
 		Lx_, Lz_, _ = sess.run([model.Lx, model.Lz, train_op], {model.x: x_})
 		if i > 0 and i%10==0:
 			str_output = "epoch: %d   Lx: %.2f   Lz: %.2f" % (i, Lx_, Lz_)
-			if i%100 == 0:
+			if i%500 == 0:
 				str_output += '   save'
 				saver.save(sess, save_path)
 			print str_output
