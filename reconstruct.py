@@ -51,6 +51,6 @@ with graph.as_default():
 		unit_images.append(img)
 		imageio.imwrite('images/' +str(T) + '.png', img)
 
-	imageio.mimsave('images/reconstrct.gif', unit_images, duration=1.0)
+	imageio.mimsave('images/reconstruct.gif', unit_images, duration=1.0)
 
 	sess.close()
