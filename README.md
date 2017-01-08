@@ -1,7 +1,7 @@
 # DRAW
 
-paper: [A Recurrent Neural Network For Image Generation](https://arxiv.org/pdf/1502.04623.pdf)
-reference: [https://github.com/ericjang/draw](https://github.com/ericjang/draw)  
+paper: [A Recurrent Neural Network For Image Generation](https://arxiv.org/pdf/1502.04623.pdf)    
+reference: [https://github.com/ericjang/draw](https://github.com/ericjang/draw)    
 
 ## Result   
 
