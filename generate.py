@@ -52,6 +52,6 @@ with graph.as_default():
 		unit_images.append(img)
 		imageio.imwrite('images/' +str(T) + '.png', img)
 
-	imageio.mimsave('images/gen.gif', unit_images, duration=1.0)
+	imageio.mimsave('images/generate.gif', unit_images, duration=1.0)
 
 	sess.close()
